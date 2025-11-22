@@ -61,7 +61,10 @@ def home():
     with app.app_context():
         result = db.session.execute(db.select(Movie).order_by(Movie.rating.desc()))
         all_movies = result.scalars().all()
-    return render_template("index.html", all_movies=all_movies)
+        for movie in all_movies:
+            movie.ranking = all_movies.index(movie) + 1
+            db.session.commit()
+        return render_template("index.html", all_movies=all_movies)
 
 
 @app.route("/edit", methods=["GET", "POST"])
@@ -113,13 +116,13 @@ def select():
 @app.route("/movie_selected")
 def movie_selected():
     title = request.args.get('title')
-    year = request.args.get('year')
+    year = request.args.get('year')[:4]
     description = request.args.get('description')
     image_url = f"https://media.themoviedb.org/t/p/w600_and_h900_face{request.args.get('image_url')}"
     with app.app_context():
         new_movie = Movie(
             title=title,
-            year=year[:4],
+            year=year,
             description=description,
             img_url=image_url
             )
