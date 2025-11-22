@@ -12,6 +12,7 @@ import os
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+API_TOKEN = os.getenv('API_TOKEN')
 Bootstrap5(app)
 
 
@@ -30,12 +31,12 @@ class Movie(db.Model):
     __tablename__ = "movies"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     title: Mapped[str] = mapped_column(String(250), unique=True, nullable=False)
-    year: Mapped[str] = mapped_column(Integer, nullable=False)
-    description: Mapped[str] = mapped_column(String(250), nullable=False)
-    rating: Mapped[float] = mapped_column(Float, nullable=False)
-    ranking: Mapped[int] = mapped_column(Integer, nullable=False)
-    review: Mapped[str] = mapped_column(String(250), nullable=False)
-    img_url: Mapped[str] = mapped_column(String(250), nullable=False)
+    year: Mapped[str] = mapped_column(Integer, nullable=True)
+    description: Mapped[str] = mapped_column(String(250))
+    rating: Mapped[float] = mapped_column(Float, nullable=True)
+    ranking: Mapped[int] = mapped_column(Integer, nullable=True)
+    review: Mapped[str] = mapped_column(String(250), nullable=True)
+    img_url: Mapped[str] = mapped_column(String(250), nullable=True)
 
 
 with app.app_context():
@@ -90,13 +91,41 @@ def add_movie():
     form = AddMovieForm()
     if form.validate_on_submit():
         movie_name = form.title.data
-        return render_template('select.html', movie_name=movie_name)
+        return redirect(url_for('select', movie_name=movie_name))
     return render_template("add.html", form=form)
 
 
 @app.route("/select", methods=["GET", "POST"])
 def select():
-    return render_template('select.html')
+    movie_name = request.args.get('movie_name')
+    url = "https://api.themoviedb.org/3/search/movie"
+    headers = {
+        "accept": "application/json",
+        "Authorization": API_TOKEN
+    }
+    params = {
+        'query': movie_name
+    }
+    movie_results = requests.get(url, headers=headers, params=params).json()['results']
+    return render_template('select.html', movie_results=movie_results)
+
+
+@app.route("/movie_selected")
+def movie_selected():
+    title = request.args.get('title')
+    year = request.args.get('year')
+    description = request.args.get('description')
+    image_url = f"https://media.themoviedb.org/t/p/w600_and_h900_face{request.args.get('image_url')}"
+    with app.app_context():
+        new_movie = Movie(
+            title=title,
+            year=year[:4],
+            description=description,
+            img_url=image_url
+            )
+        db.session.add(new_movie)
+        db.session.commit()
+        return redirect(url_for('edit', id=new_movie.id))
 
 
 if __name__ == '__main__':
