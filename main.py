@@ -5,7 +5,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import Integer, String, Float
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
-from wtforms.fields.numeric import IntegerField, DecimalField
+from wtforms.fields.numeric import DecimalField
 from wtforms.validators import DataRequired, NumberRange
 import requests
 import os
@@ -64,7 +64,7 @@ def home():
         for movie in all_movies:
             movie.ranking = all_movies.index(movie) + 1
             db.session.commit()
-        return render_template("index.html", all_movies=all_movies)
+        return render_template("index.html", all_movies=all_movies[::-1])
 
 
 @app.route("/edit", methods=["GET", "POST"])
